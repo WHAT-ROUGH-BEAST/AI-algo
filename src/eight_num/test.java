@@ -1,10 +1,6 @@
 package eight_num;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.logging.*;
 
 /**
@@ -24,17 +20,19 @@ public class test implements Log {
 	static void RUN(Treesearch search) {
 		search.Search();
 		System.out.println(
+				search.getClass().toString()+ "\n" +
 				"actions: "+search.retActSeq() + "\n" +
 				"timecost: " +search.retTimeCost() + "\n" +
 				"spacecost: "+search.retSpaceCost());
 	}
 	public static void main(String[] args) {
-//		RUN(new BFS());
+		RUN(new BFS());
 		RUN(new DFS(20));
+		RUN(new Astar());
 	}
 }
 
-class Node{
+class Node implements Comparable<Node>{ // implements Comparable to use PriorityQueue
 	private final ArrayList<Integer> state;
 	private Node parent = null;
 	private String parentAct = null;
@@ -43,6 +41,7 @@ class Node{
 	//动作对应步数
 	private HashMap<String, Integer> actions = new HashMap<String, Integer>();
 	
+	//Constructor
 	public Node
 	(final ArrayList<Integer> init, final Node parent, final String parentAct, final int cost) {
 		state = new ArrayList<>(init);
@@ -125,15 +124,37 @@ class Node{
 		}
 		return true;
 	}
+
+	// Comparable : compareTo
+	// Astar : lower f_price
+	@Override
+	public int compareTo(Node o) {
+		if (f_price(this) > f_price(o))
+			return 1;
+		else if (f_price(this) == f_price(o))
+			return 0;
+		
+		return -1;
+	}
+	
+	private int f_price(Node node)
+	{
+		int price = node.getCost();
+		for (int i = 0; i < node.getState().size(); i++)
+		{
+			price += Math.abs(i - Treesearch.goalSeq.indexOf(node.getState().get(i)));
+		}
+		return price;
+	}
 }
 
 abstract class Treesearch implements Log {
 	//初始
-	final ArrayList<Integer> initSeq = 
+	final static ArrayList<Integer> initSeq = 
 //			new ArrayList<>(Arrays.asList(7, 2, 4, 5, 0, 6, 8, 3, 1));
-			new ArrayList<>(Arrays.asList(3, 1, 2, 4, 0, 5, 6, 7, 8)); //test if work
+			new ArrayList<>(Arrays.asList(3, 1, 2, 4, 7, 5, 0, 6, 8)); //test if work
 	//目标
-	final ArrayList<Integer> goalSeq = 
+	final static ArrayList<Integer> goalSeq = 
 			new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8));
 	//动作
 	final ArrayList<String> actions = 
@@ -175,7 +196,7 @@ class BFS extends Treesearch{
 	
 	public boolean Search() 
 	{
-		Node node = new Node(initSeq, null, null, 0);
+		Node node = new Node(initSeq, null, null, 1);
 		
 		frontier.push(node);
 		
@@ -225,14 +246,14 @@ class DFS extends Treesearch{
 	
 //	public boolean Search()
 //	{
-//		return recursive(new Node(initSeq, null, null, 0), limit);
+//		return recursive(new Node(initSeq, null, null, 1), limit);
 //	}
 	
 	// iterative deepending search
 	public boolean Search()
 	{
 		int currentLimit = 1;
-		while (!recursive(new Node(initSeq, null, null, 0), currentLimit))
+		while (!recursive(new Node(initSeq, null, null, 1), currentLimit))
 		{
 			currentLimit++;
 			
@@ -265,7 +286,7 @@ class DFS extends Treesearch{
 				Node child;
 				if (node.getChild(s) != null) {
 					child = node.getChild(s);
-					logger.info(child.getState().toString());
+//					logger.info(child.getState().toString());
 					spaceCost++;
 				} else continue;
 				
@@ -275,7 +296,6 @@ class DFS extends Treesearch{
 				}
 				else
 				{
-					limit++;
 					return true;
 				}
 			}
@@ -290,8 +310,49 @@ class DFS extends Treesearch{
 
 //TODO
 class Astar extends Treesearch{
+	private PriorityQueue<Node> frontier = new PriorityQueue<Node>();
+	private LinkedList<ArrayList<Integer>> explored = new LinkedList<>();
+	
 	public boolean Search()
 	{
+		Node node = new Node(initSeq, null, null, 1);
+		frontier.offer(node);
+		
+		while (!frontier.isEmpty())
+		{
+			node = frontier.poll();
+			
+			if (node.check(goalSeq))
+			{
+				getSolution(node);
+				return true;
+			}
+			
+			explored.add(node.getState());
+			for (String s : actions)
+			{
+				Node child;
+				if (node.getChild(s) != null)
+				{
+					child = node.getChild(s);
+//					logger.info(child.getState().toString());
+					spaceCost++;
+				}
+				else
+					continue;
+				
+				if (!frontier.contains(child) || !explored.contains(child.getState()))
+				{
+					frontier.offer(child);
+				}
+				else if (frontier.contains(child) && child.getCost() > node.getCost())
+				{
+					frontier.remove(node);
+					frontier.offer(child);
+				}
+			}
+		}
+		
 		return false;
 	}
 }
