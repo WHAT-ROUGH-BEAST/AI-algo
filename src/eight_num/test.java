@@ -1,7 +1,10 @@
 package eight_num;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.logging.*;
 
 /**
@@ -13,7 +16,11 @@ import java.util.logging.*;
  * 树—— 子节点就是下一步空格的合法移动
  * 用一维数组序列记录一个状态
  */
-public class test {
+interface Log{
+	Logger logger = Logger.getLogger("logTest1");
+}
+
+public class test implements Log {
 	static void RUN(Treesearch search) {
 		search.Search();
 		System.out.println(
@@ -22,9 +29,8 @@ public class test {
 				"spacecost: "+search.retSpaceCost());
 	}
 	public static void main(String[] args) {
-		RUN(new BFS());
-		Logger logger = Logger.getLogger("logTest1");
-		logger.info("Message 1"); 
+//		RUN(new BFS());
+		RUN(new DFS(20));
 	}
 }
 
@@ -63,18 +69,22 @@ class Node{
 	}
 	
 	public ArrayList<Integer> act(String action) {
-		ArrayList<Integer> nextSta = new ArrayList<>(state);
 		if (haveAccess(action)) {
+			ArrayList<Integer> nextSta = new ArrayList<>(state);
+			
 			Collections.swap(nextSta, nextSta.indexOf(0), nextSta.indexOf(0) + actions.get(action));
 			return nextSta;
 		}
 		else
 		{
-			return nextSta;
+			return null; //本操作不可行
 		}
 	}
 	
 	public Node getChild(String action) {
+		if (null == this.act(action))
+			return null; //本操作不可行
+		
 		return new Node(this.act(action), this, action, cost+1);
 	}
 	
@@ -117,11 +127,11 @@ class Node{
 	}
 }
 
-abstract class Treesearch{
+abstract class Treesearch implements Log {
 	//初始
 	final ArrayList<Integer> initSeq = 
-			new ArrayList<>(Arrays.asList(7, 2, 4, 5, 0, 6, 8, 3, 1));
-//			new ArrayList<>(Arrays.asList(1, 0, 2, 3, 4, 5, 6, 7, 8)); test if work
+//			new ArrayList<>(Arrays.asList(7, 2, 4, 5, 0, 6, 8, 3, 1));
+			new ArrayList<>(Arrays.asList(3, 1, 2, 4, 0, 5, 6, 7, 8)); //test if work
 	//目标
 	final ArrayList<Integer> goalSeq = 
 			new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8));
@@ -139,7 +149,6 @@ abstract class Treesearch{
 		Node node = new Node(goalNode);
 		while(null != node.parentAct())
 		{
-//			System.out.println(node.parentAct());
 			actSeq.add(node.parentAct());
 			node = node.getParent();
 		}
@@ -167,6 +176,7 @@ class BFS extends Treesearch{
 	public boolean Search() 
 	{
 		Node node = new Node(initSeq, null, null, 0);
+		
 		frontier.push(node);
 		
 		if (node.check(goalSeq))
@@ -183,12 +193,12 @@ class BFS extends Treesearch{
 			for (String s : actions) 
 			{
 				Node child = node.getChild(s);
+				
 				//当本操作不可进行时，返回与原节点相同的序列
-				if (child.getState().equals(node.getState()))
+				if (null == child)
 					continue;
-				
 				spaceCost++; /*计算空间复杂度*/
-				
+							
 				if (!explored.contains(child.getState())) 
 				{
 					if (child.check(goalSeq)) 
@@ -206,9 +216,75 @@ class BFS extends Treesearch{
 
 //TODO
 class DFS extends Treesearch{
+	private int limit;	
+	final static boolean CUTOFF = false;
+	
+	public DFS(int limit) {
+		this.limit = limit;
+	}
+	
+//	public boolean Search()
+//	{
+//		return recursive(new Node(initSeq, null, null, 0), limit);
+//	}
+	
+	// iterative deepending search
 	public boolean Search()
 	{
-		return false;
+		int currentLimit = 1;
+		while (!recursive(new Node(initSeq, null, null, 0), currentLimit))
+		{
+			currentLimit++;
+			
+			if (currentLimit > limit)
+				return false;
+		}
+		return true;
+	}
+	
+	public boolean recursive(Node node, int limit)
+	{
+		boolean coOccure = false;
+		
+		if (node.check(goalSeq))
+		{
+			getSolution(node);
+			return true;
+		}
+		else if (0 == limit)
+		{
+//			System.out.println("limit");
+			return CUTOFF; // 应该走向其他的分支
+		}
+		else
+		{
+			coOccure = false;
+			
+			for (String s : actions)
+			{
+				Node child;
+				if (node.getChild(s) != null) {
+					child = node.getChild(s);
+					logger.info(child.getState().toString());
+					spaceCost++;
+				} else continue;
+				
+				if (CUTOFF == recursive(child, limit-1)) // 向上一层
+				{
+					coOccure = true;
+				}
+				else
+				{
+					limit++;
+					return true;
+				}
+			}
+			
+			if (coOccure)
+				return CUTOFF;
+			else
+				return false;
+		}
 	}
 }
 
