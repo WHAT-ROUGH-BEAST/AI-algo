@@ -8,6 +8,7 @@ import java.util.logging.*;
  * @author 18069
  * 描述8-puzzle
  * 
+ * 
  * 移动空格
  * 树—— 子节点就是下一步空格的合法移动
  * 用一维数组序列记录一个状态
@@ -39,17 +40,19 @@ class Node implements Comparable<Node>{ // implements Comparable to use Priority
 	private int cost = 1;
 
 	//动作对应步数
-	private HashMap<String, Integer> actions = new HashMap<String, Integer>();
+	private static final HashMap<String, Integer> actions = new HashMap<String, Integer>();
+	static
+	{
+		actions.put("up", -3);
+		actions.put("down", 3);
+		actions.put("right", 1);
+		actions.put("left", -1);
+	};
 	
 	//Constructor
 	public Node
 	(final ArrayList<Integer> init, final Node parent, final String parentAct, final int cost) {
 		state = new ArrayList<>(init);
-		actions.put("up", -3);
-		actions.put("down", 3);
-		actions.put("right", 1);
-		actions.put("left", -1);
-		
 		this.parent = parent;
 		this.parentAct = parentAct;
 		this.cost = cost;
@@ -129,21 +132,31 @@ class Node implements Comparable<Node>{ // implements Comparable to use Priority
 	// Astar : lower f_price
 	@Override
 	public int compareTo(Node o) {
-		if (f_price(this) > f_price(o))
+		if (Price.f_price(this) > Price.f_price(o))
 			return 1;
-		else if (f_price(this) == f_price(o))
+		else if (Price.f_price(this) == Price.f_price(o))
 			return 0;
 		
 		return -1;
 	}
-	
-	private int f_price(Node node)
+}
+
+class Price
+{
+	public static int f_price(Node node)
 	{
 		int price = node.getCost();
-		for (int i = 0; i < node.getState().size(); i++)
+		
+		for (int i = 1; i <= 8; i++)
 		{
-			price += Math.abs(i - Treesearch.goalSeq.indexOf(node.getState().get(i)));
+			// line
+			price += Math.abs(
+					node.getState().indexOf(i)/3 - Treesearch.goalSeq.indexOf(i)/3);
+			// column
+			price += Math.abs(
+					node.getState().indexOf(i)%3 - Treesearch.goalSeq.indexOf(i)%3);
 		}
+		
 		return price;
 	}
 }
@@ -151,8 +164,8 @@ class Node implements Comparable<Node>{ // implements Comparable to use Priority
 abstract class Treesearch implements Log {
 	//初始
 	final static ArrayList<Integer> initSeq = 
-//			new ArrayList<>(Arrays.asList(7, 2, 4, 5, 0, 6, 8, 3, 1));
-			new ArrayList<>(Arrays.asList(3, 1, 2, 4, 7, 5, 0, 6, 8)); //test if work
+			new ArrayList<>(Arrays.asList(7, 2, 4, 5, 0, 6, 8, 3, 1));
+//			new ArrayList<>(Arrays.asList(3, 1, 2, 4, 7, 5, 0, 6, 8)); //test if work
 	//目标
 	final static ArrayList<Integer> goalSeq = 
 			new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8));
@@ -244,24 +257,24 @@ class DFS extends Treesearch{
 		this.limit = limit;
 	}
 	
-//	public boolean Search()
-//	{
-//		return recursive(new Node(initSeq, null, null, 1), limit);
-//	}
-	
-	// iterative deepending search
 	public boolean Search()
 	{
-		int currentLimit = 1;
-		while (!recursive(new Node(initSeq, null, null, 1), currentLimit))
-		{
-			currentLimit++;
-			
-			if (currentLimit > limit)
-				return false;
-		}
-		return true;
+		return recursive(new Node(initSeq, null, null, 1), limit);
 	}
+	
+	// iterative deepending search
+//	public boolean Search()
+//	{
+//		int currentLimit = 1;
+//		while (!recursive(new Node(initSeq, null, null, 1), currentLimit))
+//		{
+//			currentLimit++;
+//			
+//			if (currentLimit > limit)
+//				return false;
+//		}
+//		return true;
+//	}
 	
 	public boolean recursive(Node node, int limit)
 	{
